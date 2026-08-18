@@ -12,11 +12,75 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Bảng Recipe để bạn test
+// BẢNG QUẢN LÝ ẢNH
+model Image {
+  id         Int         @id @default(autoincrement())
+  url        String      
+  createdAt  DateTime    @default(now())
+
+  recipe     Recipe?
+  cuisine    Cuisine?
+  ingredient Ingredient?
+}
+
+// BẢNG PHONG CÁCH ẨM THỰC (Ví dụ: Vietnamese, Italian)
+model Cuisine {
+  id      Int      @id @default(autoincrement())
+  name    String   @unique
+  imageId Int?     @unique 
+  image   Image?   @relation(fields: [imageId], references: [id])
+  recipes Recipe[] 
+}
+
+// BẢNG NGUYÊN LIỆU (Ví dụ: Chicken, Garlic, Tomato)
+model Ingredient {
+  id      Int      @id @default(autoincrement())
+  name    String   @unique
+  imageId Int?     @unique // Quan hệ 1-1 với Image
+
+  image   Image?   @relation(fields: [imageId], references: [id])
+  recipes RecipeIngredient[] 
+}
+
+// BẢNG CÔNG THỨC CHÍNH
 model Recipe {
   id          Int      @id @default(autoincrement())
   title       String
-  description String?
-  imageUrl    String?
+  description String   @db.Text 
   createdAt   DateTime @default(now())
+
+  // Khóa ngoại
+  cuisineId   Int
+  imageId     Int?     @unique 
+
+  // Quan hệ
+  cuisine     Cuisine  @relation(fields: [cuisineId], references: [id])
+  image       Image?   @relation(fields: [imageId], references: [id])
+  
+  ingredients RecipeIngredient[]
+  instructions Instruction[]
+}
+
+// --------------------------------------------------
+// BẢNG TRUNG GIAN (RECIPE - INGREDIENT)
+// --------------------------------------------------
+model RecipeIngredient {
+  recipeId     Int
+  ingredientId Int
+  quantity     String     // Ví dụ: "200g", "2 tép"
+
+  recipe       Recipe     @relation(fields: [recipeId], references: [id])
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id])
+
+  @@id([recipeId, ingredientId]) 
+}
+
+// BẢNG CÁC BƯỚC THỰC HIỆN (INSTRUCTIONS)
+model Instruction {
+  id          Int    @id @default(autoincrement())
+  recipeId    Int
+  stepNumber  Int    
+  description String @db.Text 
+
+  recipe      Recipe @relation(fields: [recipeId], references: [id])
 }
