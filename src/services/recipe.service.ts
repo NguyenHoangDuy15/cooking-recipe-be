@@ -42,18 +42,20 @@ export const getRecipesService = async (page: number, limit: number, search: str
     orderBy: { createdAt: 'desc' }
   });
 
+  // Helper to remove Vietnamese accents
+  const removeAccents = (str: string) => {
+    return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D');
+  };
+
   // 2. JS Memory Filter for "search" keyword to ensure accurate substring matching
   let filteredRecipes = allRecipes;
   if (search) {
+    const unaccentedSearch = removeAccents(search).toLowerCase();
+
     filteredRecipes = allRecipes.filter(recipe => {
-      // Exact word boundary matching using Regex for Unicode (optional, but includes() is usually enough)
-      // includes() will still match "ngày" for "gà", but it won't falsely match "ngậy" or "ga" anymore.
-      // To be even stricter and match the standalone word "gà":
-      const regex = new RegExp(`(^|[^\\p{L}])${search}([^\\p{L}]|$)`, 'iu');
-      
-      return regex.test(recipe.title) || 
-             regex.test(recipe.description) || 
-             recipe.ingredients.some(ri => regex.test(ri.ingredient.name));
+      return removeAccents(recipe.title).toLowerCase().includes(unaccentedSearch) || 
+             removeAccents(recipe.description).toLowerCase().includes(unaccentedSearch) || 
+             recipe.ingredients.some(ri => removeAccents(ri.ingredient.name).toLowerCase().includes(unaccentedSearch));
     });
   }
 
