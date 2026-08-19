@@ -1,0 +1,10 @@
+node_modules
+.git
+.env
+public/uploads/*
+!public/uploads/.gitkeep
+.agents
+.claude
+.windsurf
+.gemini
+dist

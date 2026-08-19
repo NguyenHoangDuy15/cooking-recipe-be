@@ -29,6 +29,18 @@ app.use('/api/recipes', recipeRoutes);
 app.use('/api/cuisines', cuisineRoutes);
 app.use('/api/ingredients', ingredientRoutes);
 
+app.get('/', (req, res) => {
+  res.json({
+    message: 'Welcome to Cooking Recipe API',
+    endpoints: {
+      healthCheck: '/health',
+      getAllRecipes: '/api/recipes',
+      getAllCuisines: '/api/cuisines',
+      getAllIngredients: '/api/ingredients'
+    }
+  });
+});
+
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', storageMode: config.storageMode });
 });
