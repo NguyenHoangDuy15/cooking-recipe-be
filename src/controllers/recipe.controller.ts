@@ -1,106 +1,43 @@
 import type { Request, Response } from 'express';
-import { prisma } from '../config/prisma';
 import { processAndSaveImage } from '../services/image.service';
+import { getRecipesService, getRecipeByIdService, createRecipeService } from '../services/recipe.service';
 
+/**
+ * Controller to handle fetching a paginated list of recipes with optional filters.
+ * Extracts query parameters (page, limit, search, cuisineId, ingredients) and calls the service.
+ * Responds with the paginated recipe data and metadata.
+ * 
+ * @param {Request} req - The Express request object.
+ * @param {Response} res - The Express response object.
+ */
 export const getRecipes = async (req: Request, res: Response) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
-
     const search = (req.query.search as string || '').toLowerCase().trim();
-    const cuisine = req.query.cuisine as string;
+    const cuisineId = req.query.cuisineId ? parseInt(req.query.cuisineId as string) : undefined;
     const ingredients = req.query.ingredients as string; // comma separated names
 
-    // 1. Build Prisma where clause for strict filters (cuisine, exact ingredients)
-    const whereClause: any = {};
-
-    if (cuisine) {
-      whereClause.cuisine = { name: cuisine };
-    }
-
-    if (ingredients) {
-      const ingredientNames = ingredients.split(',').map(i => i.trim()).filter(Boolean);
-      whereClause.ingredients = {
-        some: {
-          ingredient: {
-            name: { in: ingredientNames }
-          }
-        }
-      };
-    }
-
-    // Fetch all recipes matching the strict filters to do precise memory-filtering for search
-    // This avoids MySQL's accent-insensitive collation matching "gà" with "ga" (Jjigae) or "gậ" (ngậy)
-    const allRecipes = await prisma.recipe.findMany({
-      where: whereClause,
-      include: {
-        image: true,
-        cuisine: true,
-        ingredients: {
-          include: { ingredient: true }
-        }
-      },
-      orderBy: { createdAt: 'desc' }
-    });
-
-    // 2. JS Memory Filter for "search" keyword to ensure accurate substring matching
-    let filteredRecipes = allRecipes;
-    if (search) {
-      filteredRecipes = allRecipes.filter(recipe => {
-        const titleMatch = recipe.title.toLowerCase().includes(search);
-        const descMatch = recipe.description.toLowerCase().includes(search);
-        // Also check if any ingredient contains the search term (e.g. searching "gà" matches "Thịt gà")
-        const ingredientMatch = recipe.ingredients.some(ri => 
-          ri.ingredient.name.toLowerCase().includes(search)
-        );
-        
-        // Exact word boundary matching using Regex for Unicode (optional, but includes() is usually enough)
-        // includes() will still match "ngày" for "gà", but it won't falsely match "ngậy" or "ga" anymore.
-        // To be even stricter and match the standalone word "gà":
-        const regex = new RegExp(`(^|[^\\p{L}])${search}([^\\p{L}]|$)`, 'iu');
-        
-        return regex.test(recipe.title) || 
-               regex.test(recipe.description) || 
-               recipe.ingredients.some(ri => regex.test(ri.ingredient.name));
-      });
-    }
-
-    // 3. Paginate the filtered results
-    const total = filteredRecipes.length;
-    const skip = (page - 1) * limit;
-    const paginatedRecipes = filteredRecipes.slice(skip, skip + limit);
-
-    res.json({
-      data: paginatedRecipes,
-      meta: {
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit)
-      }
-    });
+    const result = await getRecipesService(page, limit, search, cuisineId, ingredients);
+    res.json(result);
   } catch (error) {
     console.error('Error fetching recipes:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };
 
+/**
+ * Controller to handle fetching a single recipe by its ID.
+ * Expects `id` in request parameters.
+ * Responds with the detailed recipe data or a 404 error if not found.
+ * 
+ * @param {Request} req - The Express request object.
+ * @param {Response} res - The Express response object.
+ */
 export const getRecipeById = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    const recipe = await prisma.recipe.findUnique({
-      where: { id: parseInt(id as string) },
-      include: {
-        image: true,
-        cuisine: true,
-        ingredients: {
-          include: { ingredient: true }
-        },
-        instructions: {
-          orderBy: { stepNumber: 'asc' }
-        }
-      }
-    });
+    const recipe = await getRecipeByIdService(parseInt(id as string));
 
     if (!recipe) {
       res.status(404).json({ error: 'Recipe not found' });
@@ -114,6 +51,15 @@ export const getRecipeById = async (req: Request, res: Response): Promise<void> 
   }
 };
 
+/**
+ * Controller to handle creating a new recipe.
+ * Expects 'multipart/form-data' payload. Processes optional image upload, parses ingredients and instructions,
+ * and calls the service to create the recipe in the database.
+ * Responds with the newly created recipe record.
+ * 
+ * @param {Request} req - The Express request object containing form data and optionally an uploaded file.
+ * @param {Response} res - The Express response object.
+ */
 export const createRecipe = async (req: Request, res: Response): Promise<void> => {
   try {
     // Process image if provided in multipart form data
@@ -149,34 +95,7 @@ export const createRecipe = async (req: Request, res: Response): Promise<void> =
       return;
     }
 
-    const newRecipe = await prisma.recipe.create({
-      data: {
-        title,
-        description,
-        cuisineId: parseInt(cuisineId),
-        imageId,
-        ingredients: {
-          create: ingredientsData.map(i => ({
-            quantity: i.quantity,
-            ingredient: {
-              connect: { id: i.ingredientId }
-            }
-          }))
-        },
-        instructions: {
-          create: instructionsData.map(i => ({
-            stepNumber: i.stepNumber,
-            description: i.description
-          }))
-        }
-      },
-      include: {
-        image: true,
-        cuisine: true,
-        ingredients: { include: { ingredient: true } },
-        instructions: true
-      }
-    });
+    const newRecipe = await createRecipeService(title, description, parseInt(cuisineId), imageId, ingredientsData, instructionsData);
 
     res.status(201).json(newRecipe);
   } catch (error) {

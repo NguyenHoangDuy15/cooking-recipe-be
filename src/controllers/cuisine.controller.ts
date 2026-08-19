@@ -1,14 +1,16 @@
 import type { Request, Response } from 'express';
-import { prisma } from '../config/prisma';
+import { getAllCuisinesService, getRecipesByCuisineIdService } from '../services/cuisine.service';
 
-// Fetch all cuisines from the database
+/**
+ * Controller to handle fetching all cuisines.
+ * Responds with a JSON array of all cuisines.
+ * 
+ * @param {Request} req - The Express request object.
+ * @param {Response} res - The Express response object.
+ */
 export const getAllCuisines = async (req: Request, res: Response) => {
   try {
-    const cuisines = await prisma.cuisine.findMany({
-      include: {
-        image: true // Include associated image if any
-      }
-    });
+    const cuisines = await getAllCuisinesService();
     res.json(cuisines);
   } catch (error) {
     console.error('Error fetching cuisines:', error);
@@ -16,47 +18,28 @@ export const getAllCuisines = async (req: Request, res: Response) => {
   }
 };
 
-// Fetch paginated recipes belonging to a specific cuisine by its name
-export const getRecipesByCuisineName = async (req: Request, res: Response) => {
+/**
+ * Controller to handle fetching recipes by a specific cuisine ID.
+ * Expects `id` in request parameters and optional `page` and `limit` in query string.
+ * Responds with paginated recipe data or a 404 error if the cuisine is not found.
+ * 
+ * @param {Request} req - The Express request object.
+ * @param {Response} res - The Express response object.
+ */
+export const getRecipesByCuisineId = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { name } = req.params;
+    const { id } = req.params;
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
-    const skip = (page - 1) * limit;
 
-    // First find the cuisine ID based on the provided name
-    const cuisine = await prisma.cuisine.findUnique({
-      where: { name: name as string }
-    });
+    const result = await getRecipesByCuisineIdService(parseInt(id as string), page, limit);
 
-    if (!cuisine) {
+    if (!result) {
       res.status(404).json({ error: 'Cuisine not found' });
       return;
     }
 
-    const [recipes, total] = await Promise.all([
-      prisma.recipe.findMany({
-        where: { cuisineId: cuisine.id },
-        include: {
-          image: true,
-          cuisine: true,
-          ingredients: { include: { ingredient: true } }
-        },
-        skip,
-        take: limit,
-      }),
-      prisma.recipe.count({ where: { cuisineId: cuisine.id } })
-    ]);
-
-    res.json({
-      data: recipes,
-      meta: {
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit)
-      }
-    });
+    res.json(result);
   } catch (error) {
     console.error('Error fetching recipes by cuisine:', error);
     res.status(500).json({ error: 'Internal server error' });

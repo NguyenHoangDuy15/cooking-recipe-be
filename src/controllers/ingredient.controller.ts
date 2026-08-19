@@ -1,14 +1,16 @@
 import type { Request, Response } from 'express';
-import { prisma } from '../config/prisma';
+import { getAllIngredientsService, getRecipesByIngredientsService } from '../services/ingredient.service';
 
-// Fetch all available ingredients from the database
+/**
+ * Controller to handle fetching all ingredients.
+ * Responds with a JSON array of all available ingredients.
+ * 
+ * @param {Request} req - The Express request object.
+ * @param {Response} res - The Express response object.
+ */
 export const getAllIngredients = async (req: Request, res: Response) => {
   try {
-    const ingredients = await prisma.ingredient.findMany({
-      include: {
-        image: true // Include associated image if any
-      }
-    });
+    const ingredients = await getAllIngredientsService();
     res.json(ingredients);
   } catch (error) {
     console.error('Error fetching ingredients:', error);
@@ -16,13 +18,19 @@ export const getAllIngredients = async (req: Request, res: Response) => {
   }
 };
 
-// Fetch paginated recipes that contain ANY of the specified ingredients
+/**
+ * Controller to handle fetching recipes that contain specified ingredients.
+ * Expects `names` as a comma-separated query parameter (e.g. ?names=Tomato,Garlic).
+ * Responds with paginated recipe data.
+ * 
+ * @param {Request} req - The Express request object.
+ * @param {Response} res - The Express response object.
+ */
 export const getRecipesByIngredients = async (req: Request, res: Response): Promise<void> => {
   try {
     const namesParam = req.query.names as string; // comma-separated names e.g., ?names=Tomato,Onion
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
-    const skip = (page - 1) * limit;
 
     if (!namesParam) {
       res.status(400).json({ error: 'Query parameter "names" is required (comma-separated ingredient names)' });
@@ -31,53 +39,9 @@ export const getRecipesByIngredients = async (req: Request, res: Response): Prom
 
     const ingredientNames = namesParam.split(',').map(n => n.trim()).filter(Boolean);
 
-    // Find recipes that contain ANY of these ingredients (or ALL? Usually ANY is easier or user implies ALL. Let's do ANY but rank, or just IN clause)
-    // For simplicity, we'll find recipes that have at least one of the specified ingredients.
-    const [recipes, total] = await Promise.all([
-      prisma.recipe.findMany({
-        where: {
-          ingredients: {
-            some: {
-              ingredient: {
-                name: {
-                  in: ingredientNames
-                }
-              }
-            }
-          }
-        },
-        include: {
-          image: true,
-          cuisine: true,
-          ingredients: { include: { ingredient: true } }
-        },
-        skip,
-        take: limit,
-      }),
-      prisma.recipe.count({
-        where: {
-          ingredients: {
-            some: {
-              ingredient: {
-                name: {
-                  in: ingredientNames
-                }
-              }
-            }
-          }
-        }
-      })
-    ]);
+    const result = await getRecipesByIngredientsService(ingredientNames, page, limit);
 
-    res.json({
-      data: recipes,
-      meta: {
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit)
-      }
-    });
+    res.json(result);
   } catch (error) {
     console.error('Error fetching recipes by ingredients:', error);
     res.status(500).json({ error: 'Internal server error' });

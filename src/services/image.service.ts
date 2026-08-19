@@ -4,6 +4,14 @@ import { s3Client } from '../config/s3';
 import { config } from '../config/env';
 import { prisma } from '../config/prisma';
 
+/**
+ * Processes an uploaded image file and saves its record to the database.
+ * Depending on the configuration, it constructs a local URL or uploads the file to Cloudflare R2 and constructs a public URL.
+ *
+ * @param {Express.Multer.File} file - The file object provided by Multer middleware.
+ * @param {Request} req - The Express request object, used to construct local URLs.
+ * @returns {Promise<Object>} The newly created image database record containing the final URL.
+ */
 export const processAndSaveImage = async (file: Express.Multer.File, req: Request) => {
   let finalUrl = '';
 
