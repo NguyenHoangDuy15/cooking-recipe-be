@@ -1,11 +1,12 @@
 import type { Request, Response } from 'express';
 import { prisma } from '../config/prisma';
 
+// Fetch all cuisines from the database
 export const getAllCuisines = async (req: Request, res: Response) => {
   try {
     const cuisines = await prisma.cuisine.findMany({
       include: {
-        image: true
+        image: true // Include associated image if any
       }
     });
     res.json(cuisines);
@@ -15,6 +16,7 @@ export const getAllCuisines = async (req: Request, res: Response) => {
   }
 };
 
+// Fetch paginated recipes belonging to a specific cuisine by its name
 export const getRecipesByCuisineName = async (req: Request, res: Response) => {
   try {
     const { name } = req.params;
@@ -22,6 +24,7 @@ export const getRecipesByCuisineName = async (req: Request, res: Response) => {
     const limit = parseInt(req.query.limit as string) || 10;
     const skip = (page - 1) * limit;
 
+    // First find the cuisine ID based on the provided name
     const cuisine = await prisma.cuisine.findUnique({
       where: { name: name as string }
     });

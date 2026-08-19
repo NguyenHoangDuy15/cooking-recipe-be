@@ -1,11 +1,12 @@
 import type { Request, Response } from 'express';
 import { prisma } from '../config/prisma';
 
+// Fetch all available ingredients from the database
 export const getAllIngredients = async (req: Request, res: Response) => {
   try {
     const ingredients = await prisma.ingredient.findMany({
       include: {
-        image: true
+        image: true // Include associated image if any
       }
     });
     res.json(ingredients);
@@ -15,6 +16,7 @@ export const getAllIngredients = async (req: Request, res: Response) => {
   }
 };
 
+// Fetch paginated recipes that contain ANY of the specified ingredients
 export const getRecipesByIngredients = async (req: Request, res: Response): Promise<void> => {
   try {
     const namesParam = req.query.names as string; // comma-separated names e.g., ?names=Tomato,Onion

@@ -22,7 +22,7 @@ const ingredientsList = [
 ];
 
 const realRecipes = [
-  // VIỆT NAM
+  // VIETNAM
   {
     cuisine: 'Việt Nam',
     title: 'Phở Bò Truyền Thống',
@@ -84,7 +84,7 @@ const realRecipes = [
     ]
   },
 
-  // Ý
+  // ITALY
   {
     cuisine: 'Ý',
     title: 'Mì Spaghetti Bolognese',
@@ -126,7 +126,7 @@ const realRecipes = [
     ]
   },
 
-  // NHẬT BẢN
+  // JAPAN
   {
     cuisine: 'Nhật Bản',
     title: 'Sushi Cá Hồi (Sake Nigiri)',
@@ -168,7 +168,7 @@ const realRecipes = [
     ]
   },
 
-  // HÀN QUỐC
+  // KOREA
   {
     cuisine: 'Hàn Quốc',
     title: 'Canh Kim Chi (Kimchi Jjigae)',
@@ -210,7 +210,7 @@ const realRecipes = [
     ]
   },
 
-  // THÁI LAN
+  // THAILAND
   {
     cuisine: 'Thái Lan',
     title: 'Canh Tom Yum Goong',
@@ -256,6 +256,7 @@ const realRecipes = [
 
 async function main() {
   console.log('Cleaning up existing data...');
+  // Clean up old data to prevent duplication when running the seed script multiple times
   await prisma.instruction.deleteMany();
   await prisma.recipeIngredient.deleteMany();
   await prisma.recipe.deleteMany();
@@ -286,6 +287,7 @@ async function main() {
 
     for (let i = 0; i < cuisineRecipes.length; i++) {
       const rData = cuisineRecipes[i];
+      if (!rData) continue; // safety check
       console.log(`Generating recipe: ${rData.title}`);
 
       // Create Image
