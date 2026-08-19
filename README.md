@@ -6,8 +6,9 @@
 ![Prisma](https://img.shields.io/badge/Prisma-3982CE?style=for-the-badge&logo=Prisma&logoColor=white)
 ![MySQL](https://img.shields.io/badge/MySQL-00000F?style=for-the-badge&logo=mysql&logoColor=white)
 ![Fly.io](https://img.shields.io/badge/Deployed_on-Fly.io-24185b?style=for-the-badge&logo=flydotio&logoColor=white)
+![CI/CD](https://img.shields.io/badge/CI%2FCD-GitHub_Actions-2088FF?style=for-the-badge&logo=github-actions&logoColor=white)
 
-A robust and scalable Backend API for a Cooking Recipe Web Application. Built specifically to demonstrate clean architecture, modern backend practices, and cloud deployment.
+A robust and scalable Backend API for a Cooking Recipe Web Application. Built specifically to demonstrate clean architecture, modern backend practices, cloud deployment, and automated CI/CD pipelines.
 
 ---
 
@@ -21,10 +22,11 @@ The API is fully deployed and includes an interactive **Swagger UI** documentati
 
 ## ✨ Key Features
 
-- **Advanced Recipe Search:** Search recipes by keyword, filter by specific `cuisineId`, and filter by dynamic `ingredients`.
-- **Comprehensive Details:** Fetch full recipe details including high-quality images, detailed ingredient lists, and step-by-step cooking instructions.
-- **Image Upload Handling:** Secure and persistent image uploading mechanisms ready for production.
+- **Smart Fuzzy Search:** Advanced accent-insensitive Vietnamese search capability. Users can intuitively search "ga" to accurately find recipes like "Cơm Gà" without strict character or word-boundary limitations.
+- **Comprehensive Details:** Fetch full recipe details including high-quality images, detailed ingredient lists, and step-by-step cooking instructions via joined tables.
+- **Image Upload Handling:** Secure and persistent image uploading mechanisms via Docker mounted volumes.
 - **Seeded Database:** Comes with pre-seeded real-world data (Phở, Sushi, Pizza, etc.) for immediate testing.
+- **Automated CI/CD:** fully integrated with GitHub actions for zero-downtime automated deployments.
 
 ---
 
@@ -32,26 +34,13 @@ The API is fully deployed and includes an interactive **Swagger UI** documentati
 
 This project strictly follows the **3-Tier Architecture** (Controller -> Service -> Database) to ensure the codebase is clean, maintainable, and highly scalable:
 - **Controllers:** Handle HTTP requests, parsing parameters, and returning standard JSON responses.
-- **Services:** Contain core business logic (Regex searching, data formatting, cross-table querying).
+- **Services:** Contain core business logic (Fuzzy search algorithms, data formatting, cross-table querying).
 - **Prisma ORM:** Provides type-safe database access and automatic schema migrations.
 - **JSDoc Commenting:** All core functions are fully documented for developer experience (DX).
 
 ---
 
-## 🛠 Tech Stack
-
-- **Runtime:** Node.js (v20)
-- **Framework:** Express.js + TypeScript
-- **Database:** MySQL (Hosted on Aiven Cloud)
-- **ORM:** Prisma
-- **Documentation:** Swagger UI (OpenAPI 3.0)
-- **Deployment:** Fly.io (Dockerized with Persistent Volumes)
-
----
-
 ## 💻 Local Setup & Installation
-
-If you want to run this project locally on your machine, follow these steps:
 
 ### 1. Clone the repository
 ```bash
@@ -65,10 +54,10 @@ npm install
 ```
 
 ### 3. Environment Variables
-Create a `.env` file in the root directory and configure it:
+Create a `.env` file in the root directory:
 ```env
 PORT=3000
-DATABASE_URL="mysql://<user>:<password>@<host>:<port>/<dbname>"
+DATABASE_URL="mysql://<user>:<password>@<host>:<port>/<dbname>?sslaccept=accept_invalid_certs"
 STORAGE_MODE="local"
 ```
 
@@ -84,20 +73,70 @@ Run the application in development mode with hot-reload:
 ```bash
 npm run dev
 ```
-The server will start at `http://localhost:3000`. You can view the API documentation at `http://localhost:3000/api-docs`.
 
 ---
 
-## 📡 API Endpoints Overview
+## ⚙️ CI/CD Deployment Guide
 
-| Method | Endpoint | Description |
-|---|---|---|
-| `GET` | `/api/recipes` | Get all recipes (supports `search`, `cuisineId`, `ingredients` queries) |
-| `GET` | `/api/recipes/:id` | Get full details of a specific recipe |
-| `POST` | `/api/recipes` | Create a new recipe |
-| `GET` | `/api/cuisines` | Get a list of all available cuisines |
-| `GET` | `/api/cuisines/:id/recipes` | Get all recipes belonging to a specific cuisine |
-| `GET` | `/api/ingredients` | Get a list of all ingredients |
-| `POST`| `/api/images` | Upload a new recipe photo |
+This project is configured with GitHub Actions to automatically deploy to Fly.io on every push to the `main` branch.
 
-*For complete payload and response details, please visit the [Swagger UI Documentation](https://cooking-recipe-be.fly.dev/api-docs).*
+To enable this on your fork:
+1. Generate a Fly API token: `fly tokens create deploy -x 999999h`
+2. Go to your GitHub Repository -> **Settings** -> **Secrets and variables** -> **Actions**.
+3. Create a New Repository Secret:
+   - **Name:** `FLY_API_TOKEN`
+   - **Secret:** *Paste the token here*
+4. Now, running `git push` will automatically trigger a deployment!
+
+---
+
+## 📡 API Endpoints Documentation
+
+### 1. Recipes API
+#### `GET /api/recipes`
+Fetch a paginated list of recipes. Supports query parameters for filtering:
+- **`search`** *(optional)*: Fuzzy search by title or description (e.g., "ga" matches "gà").
+- **`cuisineId`** *(optional)*: Filter by a specific Cuisine ID.
+- **`ingredients`** *(optional)*: Filter by ingredient names (comma-separated).
+- **`page` & `limit`**: Pagination controls.
+
+#### `GET /api/recipes/:id`
+Fetch the complete details of a specific recipe.
+- **Response:** Returns the recipe object, including its `cuisine`, `image`, list of `ingredients`, and ordered cooking `instructions`.
+
+#### `POST /api/recipes`
+Create a new recipe in the database.
+- **Payload:**
+  ```json
+  {
+    "title": "Phở Bò",
+    "description": "Món ăn truyền thống Việt Nam",
+    "cuisineId": 1,
+    "imageId": null,
+    "ingredients": ["Bánh phở", "Thịt bò", "Hành lá"],
+    "instructions": ["Ninh xương", "Thái thịt", "Chan nước dùng"]
+  }
+  ```
+
+---
+
+### 2. Cuisines API
+#### `GET /api/cuisines`
+Returns a flat list of all available cuisines (e.g., Vietnamese, Japanese, Italian) to populate UI dropdowns.
+
+#### `GET /api/cuisines/:id/recipes`
+Convenience endpoint to fetch all recipes belonging to a specific cuisine directly.
+
+---
+
+### 3. Ingredients API
+#### `GET /api/ingredients`
+Returns a list of all distinct ingredients stored in the database. Useful for auto-complete search inputs.
+
+---
+
+### 4. Images API
+#### `POST /api/images`
+Handles `multipart/form-data` uploads for recipe photos.
+- **Field name:** `image`
+- **Response:** Saves the image to the persistent volume and returns the generated Image record (including `id` and `url`), which can be attached to the Recipe Creation payload.
