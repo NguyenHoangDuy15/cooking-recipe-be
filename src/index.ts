@@ -8,9 +8,15 @@ import imageRoutes from './routes/image.routes';
 import recipeRoutes from './routes/recipe.routes';
 import cuisineRoutes from './routes/cuisine.routes';
 import ingredientRoutes from './routes/ingredient.routes';
+import swaggerUi from 'swagger-ui-express';
+import fs from 'fs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+const swaggerDocument = JSON.parse(
+  fs.readFileSync(path.join(__dirname, './docs/swagger.json'), 'utf8')
+);
 
 const app = express();
 
@@ -29,10 +35,14 @@ app.use('/api/recipes', recipeRoutes);
 app.use('/api/cuisines', cuisineRoutes);
 app.use('/api/ingredients', ingredientRoutes);
 
+// Swagger Documentation Route
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+
 app.get('/', (req, res) => {
   res.json({
     message: 'Welcome to Cooking Recipe API',
     endpoints: {
+      swaggerDocs: '/api-docs',
       healthCheck: '/health',
       getAllRecipes: '/api/recipes',
       getAllCuisines: '/api/cuisines',
