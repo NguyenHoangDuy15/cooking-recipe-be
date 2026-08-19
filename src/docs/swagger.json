@@ -77,7 +77,7 @@
     "/cuisines/{id}/recipes": {
       "get": {
         "summary": "Get recipes by cuisine ID",
-        "tags": ["Cuisines", "Recipes"],
+        "tags": ["Cuisines"],
         "parameters": [
           {
             "in": "path",
@@ -224,17 +224,19 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "title": { "type": "string" },
-                  "description": { "type": "string" },
-                  "cuisineId": { "type": "integer" },
+                  "title": { "type": "string", "example": "Bún đậu mắm tôm" },
+                  "description": { "type": "string", "example": "Đặc sản Hà Nội cực kỳ thơm ngon" },
+                  "cuisineId": { "type": "integer", "example": 1 },
                   "image": { "type": "string", "format": "binary" },
                   "ingredients": {
                     "type": "string",
-                    "description": "JSON string of array: [{ ingredientId?: number, name?: string, quantity: string }]"
+                    "description": "JSON string of array",
+                    "example": "[{\"name\": \"Bún\", \"quantity\": \"1kg\"}, {\"name\": \"Thịt lợn\", \"quantity\": \"500g\"}]"
                   },
                   "instructions": {
                     "type": "string",
-                    "description": "JSON string of array: [{ stepNumber: number, description: string }]"
+                    "description": "JSON string of array",
+                    "example": "[{\"stepNumber\": 1, \"description\": \"Luộc thịt chín tới\"}, {\"stepNumber\": 2, \"description\": \"Thái miếng vừa ăn\"}]"
                   }
                 },
                 "required": ["title", "cuisineId", "ingredients", "instructions"]
