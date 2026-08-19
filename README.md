@@ -105,24 +105,38 @@ Fetch the complete details of a specific recipe.
 - **Response:** Returns the recipe object, including its `cuisine`, `image`, list of `ingredients`, and ordered cooking `instructions`.
 
 #### `POST /api/recipes`
-Create a new recipe in the database.
-- **Payload:**
-  ```json
-  {
-    "title": "Phở Bò",
-    "description": "Món ăn truyền thống Việt Nam",
-    "cuisineId": 1,
-    "imageId": null,
-    "ingredients": ["Bánh phở", "Thịt bò", "Hành lá"],
-    "instructions": ["Ninh xương", "Thái thịt", "Chan nước dùng"]
-  }
-  ```
+Create a new recipe. Supports `multipart/form-data` for direct image upload and smart ingredient linking/creation.
+- **Payload (`multipart/form-data`):**
+  - `title` (string): "Gà hầm sâm"
+  - `description` (string): "Món ăn bổ dưỡng"
+  - `cuisineId` (number): `1`
+  - `image` (file): [Upload image file]
+  - `ingredients` (stringified JSON array):
+    ```json
+    [
+      { "ingredientId": 1, "quantity": "1 con" },
+      { "name": "Nhân sâm", "quantity": "2 củ" }
+    ]
+    ```
+    *Note: Use `ingredientId` for existing ingredients, or `name` to dynamically create new ones.*
+  - `instructions` (stringified JSON array):
+    ```json
+    [
+      { "stepNumber": 1, "description": "Làm sạch gà" },
+      { "stepNumber": 2, "description": "Hầm trong 2 tiếng" }
+    ]
+    ```
 
 ---
 
 ### 2. Cuisines API
 #### `GET /api/cuisines`
-Returns a flat list of all available cuisines (e.g., Vietnamese, Japanese, Italian) to populate UI dropdowns.
+Returns a flat list of all available cuisines (e.g., Vietnamese, Japanese, Italian).
+- **Query Params:** `name` (optional) - Supports **Fuzzy Search** (e.g., `?name=phap` finds `Pháp`).
+
+#### `POST /api/cuisines`
+Create a new cuisine category.
+- **Payload:** `{"name": "Món Pháp"}`
 
 #### `GET /api/cuisines/:id/recipes`
 Convenience endpoint to fetch all recipes belonging to a specific cuisine directly.
@@ -131,7 +145,12 @@ Convenience endpoint to fetch all recipes belonging to a specific cuisine direct
 
 ### 3. Ingredients API
 #### `GET /api/ingredients`
-Returns a list of all distinct ingredients stored in the database. Useful for auto-complete search inputs.
+Returns a list of all distinct ingredients stored in the database. 
+- **Query Params:** `name` (optional) - Supports **Fuzzy Search** (e.g., `?name=hanh tay` finds `Hành tây`).
+
+#### `POST /api/ingredients`
+Create a new ingredient in the database.
+- **Payload:** `{"name": "Nấm Truffle"}`
 
 ---
 

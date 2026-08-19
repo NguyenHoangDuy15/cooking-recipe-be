@@ -1,16 +1,24 @@
 import { prisma } from '../config/prisma';
+import { removeAccents } from '../utils/string.util';
 
 /**
- * Retrieves all cuisines from the database, including their associated images.
- *
- * @returns {Promise<Array<Object>>} A list of all cuisines.
+ * Retrieves all available cuisines from the database.
+ * Supports optional fuzzy search by name.
+ * 
+ * @param {string} [searchName] - Optional name to search for.
+ * @returns {Promise<Array<Object>>} A list of all cuisines matching the search.
  */
-export const getAllCuisinesService = async () => {
-  return await prisma.cuisine.findMany({
+export const getAllCuisinesService = async (searchName?: string) => {
+  const allCuisines = await prisma.cuisine.findMany({
     include: {
       image: true // Include associated image if any
     }
   });
+  
+  if (!searchName) return allCuisines;
+
+  const unaccentedSearch = removeAccents(searchName).toLowerCase();
+  return allCuisines.filter(c => removeAccents(c.name).toLowerCase().includes(unaccentedSearch));
 };
 
 /**
@@ -56,4 +64,18 @@ export const getRecipesByCuisineIdService = async (id: number, page: number, lim
       totalPages: Math.ceil(total / limit)
     }
   };
+};
+
+/**
+ * Creates a new cuisine in the database.
+ * 
+ * @param {string} name - The name of the cuisine to create.
+ * @returns {Promise<Object>} The newly created cuisine object.
+ */
+export const createCuisineService = async (name: string) => {
+  return await prisma.cuisine.create({
+    data: {
+      name
+    }
+  });
 };

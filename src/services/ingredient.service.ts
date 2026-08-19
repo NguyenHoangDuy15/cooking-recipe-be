@@ -1,14 +1,36 @@
 import { prisma } from '../config/prisma';
+import { removeAccents } from '../utils/string.util';
 
 /**
- * Retrieves all available ingredients from the database, including their associated images.
+ * Retrieves all available ingredients from the database.
+ * Supports optional fuzzy search by name.
  *
- * @returns {Promise<Array<Object>>} A list of all ingredients.
+ * @param {string} [searchName] - Optional name to search for.
+ * @returns {Promise<Array<Object>>} A list of all ingredients matching the search.
  */
-export const getAllIngredientsService = async () => {
-  return await prisma.ingredient.findMany({
-    include: {
-      image: true // Include associated image if any
+export const getAllIngredientsService = async (searchName?: string) => {
+  const allIngredients = await prisma.ingredient.findMany({
+    orderBy: {
+      name: 'asc'
+    }
+  });
+
+  if (!searchName) return allIngredients;
+
+  const unaccentedSearch = removeAccents(searchName).toLowerCase();
+  return allIngredients.filter(i => removeAccents(i.name).toLowerCase().includes(unaccentedSearch));
+};
+
+/**
+ * Creates a new ingredient in the database.
+ * 
+ * @param {string} name - The name of the ingredient to create.
+ * @returns {Promise<Object>} The newly created ingredient object.
+ */
+export const createIngredientService = async (name: string) => {
+  return await prisma.ingredient.create({
+    data: {
+      name
     }
   });
 };

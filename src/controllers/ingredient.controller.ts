@@ -1,16 +1,17 @@
 import type { Request, Response } from 'express';
-import { getAllIngredientsService, getRecipesByIngredientsService } from '../services/ingredient.service';
+import { getAllIngredientsService, getRecipesByIngredientsService, createIngredientService } from '../services/ingredient.service';
 
 /**
- * Controller to handle fetching all ingredients.
- * Responds with a JSON array of all available ingredients.
+ * Retrieves a list of all available ingredients.
+ * Supports optional search by name via 'name' query parameter.
  * 
  * @param {Request} req - The Express request object.
  * @param {Response} res - The Express response object.
  */
-export const getAllIngredients = async (req: Request, res: Response) => {
+export const getAllIngredients = async (req: Request, res: Response): Promise<void> => {
   try {
-    const ingredients = await getAllIngredientsService();
+    const searchName = req.query.name as string;
+    const ingredients = await getAllIngredientsService(searchName);
     res.json(ingredients);
   } catch (error) {
     console.error('Error fetching ingredients:', error);
@@ -19,31 +20,53 @@ export const getAllIngredients = async (req: Request, res: Response) => {
 };
 
 /**
- * Controller to handle fetching recipes that contain specified ingredients.
- * Expects `names` as a comma-separated query parameter (e.g. ?names=Tomato,Garlic).
- * Responds with paginated recipe data.
+ * Retrieves recipes filtered by a specific list of ingredients.
+ * Expects 'names' as a query parameter (comma-separated).
+ * Supports pagination via 'page' and 'limit' parameters.
  * 
  * @param {Request} req - The Express request object.
  * @param {Response} res - The Express response object.
  */
 export const getRecipesByIngredients = async (req: Request, res: Response): Promise<void> => {
   try {
-    const namesParam = req.query.names as string; // comma-separated names e.g., ?names=Tomato,Onion
+    const names = req.query.names as string;
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
 
-    if (!namesParam) {
-      res.status(400).json({ error: 'Query parameter "names" is required (comma-separated ingredient names)' });
+    if (!names) {
+      res.status(400).json({ error: 'Please provide at least one ingredient name using the "names" query parameter' });
       return;
     }
 
-    const ingredientNames = namesParam.split(',').map(n => n.trim()).filter(Boolean);
-
-    const result = await getRecipesByIngredientsService(ingredientNames, page, limit);
+    const ingredientNamesArray = names.split(',').map(name => name.trim());
+    const result = await getRecipesByIngredientsService(ingredientNamesArray, page, limit);
 
     res.json(result);
   } catch (error) {
     console.error('Error fetching recipes by ingredients:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+/**
+ * Creates a new ingredient.
+ * 
+ * @param {Request} req - The Express request object.
+ * @param {Response} res - The Express response object.
+ */
+export const createIngredient = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { name } = req.body;
+    
+    if (!name || typeof name !== 'string' || name.trim() === '') {
+      res.status(400).json({ error: 'Ingredient name is required and must be a valid string' });
+      return;
+    }
+
+    const newIngredient = await createIngredientService(name.trim());
+    res.status(201).json(newIngredient);
+  } catch (error) {
+    console.error('Error creating ingredient:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };

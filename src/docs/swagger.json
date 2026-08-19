@@ -16,6 +16,17 @@
       "get": {
         "summary": "Get all cuisines",
         "tags": ["Cuisines"],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "query",
+            "description": "Optional name to search for (supports fuzzy search)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "List of cuisines",
@@ -26,6 +37,36 @@
                   "items": {
                     "$ref": "#/components/schemas/Cuisine"
                   }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a new cuisine",
+        "tags": ["Cuisines"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string" }
+                },
+                "required": ["name"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Cuisine created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Cuisine"
                 }
               }
             }
@@ -69,6 +110,17 @@
       "get": {
         "summary": "Get all ingredients",
         "tags": ["Ingredients"],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "query",
+            "description": "Optional name to search for (supports fuzzy search)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "List of ingredients",
@@ -79,6 +131,36 @@
                   "items": {
                     "$ref": "#/components/schemas/Ingredient"
                   }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a new ingredient",
+        "tags": ["Ingredients"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string" }
+                },
+                "required": ["name"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Ingredient created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ingredient"
                 }
               }
             }
@@ -138,21 +220,21 @@
         "requestBody": {
           "required": true,
           "content": {
-            "application/json": {
+            "multipart/form-data": {
               "schema": {
                 "type": "object",
                 "properties": {
                   "title": { "type": "string" },
                   "description": { "type": "string" },
                   "cuisineId": { "type": "integer" },
-                  "imageId": { "type": "integer", "nullable": true },
+                  "image": { "type": "string", "format": "binary" },
                   "ingredients": {
-                    "type": "array",
-                    "items": { "type": "string" }
+                    "type": "string",
+                    "description": "JSON string of array: [{ ingredientId?: number, name?: string, quantity: string }]"
                   },
                   "instructions": {
-                    "type": "array",
-                    "items": { "type": "string" }
+                    "type": "string",
+                    "description": "JSON string of array: [{ stepNumber: number, description: string }]"
                   }
                 },
                 "required": ["title", "cuisineId", "ingredients", "instructions"]

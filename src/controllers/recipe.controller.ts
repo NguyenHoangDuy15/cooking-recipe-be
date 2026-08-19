@@ -67,15 +67,12 @@ export const createRecipe = async (req: Request, res: Response): Promise<void> =
     if (req.file) {
       const imageRecord = await processAndSaveImage(req.file, req);
       imageId = imageRecord.id;
-    } else if (req.body.imageId) {
-      // Optional: they might have uploaded the image previously via /api/images/upload
-      imageId = parseInt(req.body.imageId);
     }
 
     const { title, description, cuisineId } = req.body;
     
     // Arrays might come as JSON strings in formData
-    let ingredientsData: { ingredientId: number, quantity: string }[] = [];
+    let ingredientsData: { ingredientId?: number, name?: string, quantity: string }[] = [];
     let instructionsData: { stepNumber: number, description: string }[] = [];
     
     try {

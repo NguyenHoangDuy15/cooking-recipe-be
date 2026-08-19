@@ -1,4 +1,5 @@
 import { prisma } from '../config/prisma';
+import { removeAccents } from '../utils/string.util';
 
 /**
  * Retrieves a paginated list of recipes based on search, cuisine, and ingredient filters.
@@ -41,11 +42,6 @@ export const getRecipesService = async (page: number, limit: number, search: str
     },
     orderBy: { createdAt: 'desc' }
   });
-
-  // Helper to remove Vietnamese accents
-  const removeAccents = (str: string) => {
-    return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D');
-  };
 
   // 2. JS Memory Filter for "search" keyword to ensure accurate substring matching
   let filteredRecipes = allRecipes;
@@ -104,11 +100,18 @@ export const getRecipeByIdService = async (id: number) => {
  * @param {string} description - A brief description of the recipe.
  * @param {number} cuisineId - The ID of the cuisine this recipe belongs to.
  * @param {number | null} imageId - The ID of the uploaded image record, or null if no image.
- * @param {Array<{ingredientId: number, quantity: string}>} ingredientsData - Array of objects mapping ingredient IDs to their quantities.
+ * @param {Array<{ingredientId?: number, name?: string, quantity: string}>} ingredientsData - Array of objects mapping ingredient IDs or names to their quantities.
  * @param {Array<{stepNumber: number, description: string}>} instructionsData - Array of objects representing cooking steps in order.
  * @returns {Promise<Object>} The newly created recipe object including its relationships.
  */
-export const createRecipeService = async (title: string, description: string, cuisineId: number, imageId: number | null, ingredientsData: { ingredientId: number, quantity: string }[], instructionsData: { stepNumber: number, description: string }[]) => {
+export const createRecipeService = async (
+  title: string, 
+  description: string, 
+  cuisineId: number, 
+  imageId: number | null, 
+  ingredientsData: { ingredientId?: number, name?: string, quantity: string }[], 
+  instructionsData: { stepNumber: number, description: string }[]
+) => {
   return await prisma.recipe.create({
     data: {
       title,
@@ -116,12 +119,28 @@ export const createRecipeService = async (title: string, description: string, cu
       cuisineId,
       imageId,
       ingredients: {
-        create: ingredientsData.map(i => ({
-          quantity: i.quantity,
-          ingredient: {
-            connect: { id: i.ingredientId }
+        create: ingredientsData.map(i => {
+          if (i.ingredientId) {
+            return {
+              quantity: i.quantity,
+              ingredient: {
+                connect: { id: i.ingredientId }
+              }
+            };
+          } else if (i.name) {
+            return {
+              quantity: i.quantity,
+              ingredient: {
+                connectOrCreate: {
+                  where: { name: i.name },
+                  create: { name: i.name }
+                }
+              }
+            };
+          } else {
+            throw new Error('Each ingredient must have either an ingredientId or a name');
           }
-        }))
+        })
       },
       instructions: {
         create: instructionsData.map(i => ({
