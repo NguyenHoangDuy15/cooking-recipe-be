@@ -11,6 +11,11 @@ export const verifyToken = (req: Request, res: Response, next: NextFunction) => 
   }
 
   const token = authHeader.split(' ')[1];
+  if (!token) {
+    res.status(401).json({ error: 'Access denied. Invalid token format.' });
+    return;
+  }
+
   try {
     const decoded = jwt.verify(token, JWT_SECRET as string);
     (req as any).user = decoded;
