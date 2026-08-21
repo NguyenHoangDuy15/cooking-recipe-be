@@ -11,19 +11,14 @@ import { getRecipesService, getRecipeByIdService, createRecipeService } from '..
  * @param {Response} res - The Express response object.
  */
 export const getRecipes = async (req: Request, res: Response) => {
-  try {
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 10;
-    const search = (req.query.search as string || '').toLowerCase().trim();
-    const cuisineId = req.query.cuisineId ? parseInt(req.query.cuisineId as string) : undefined;
-    const ingredients = req.query.ingredients as string; // comma separated names
+  const page = parseInt(req.query.page as string) || 1;
+  const limit = parseInt(req.query.limit as string) || 10;
+  const search = (req.query.search as string || '').toLowerCase().trim();
+  const cuisineId = req.query.cuisineId ? parseInt(req.query.cuisineId as string) : undefined;
+  const ingredients = req.query.ingredients as string; // comma separated names
 
-    const result = await getRecipesService(page, limit, search, cuisineId, ingredients);
-    res.json(result);
-  } catch (error) {
-    console.error('Error fetching recipes:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
+  const result = await getRecipesService(page, limit, search, cuisineId, ingredients);
+  res.json(result);
 };
 
 /**
@@ -35,20 +30,15 @@ export const getRecipes = async (req: Request, res: Response) => {
  * @param {Response} res - The Express response object.
  */
 export const getRecipeById = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { id } = req.params;
-    const recipe = await getRecipeByIdService(parseInt(id as string));
+  const { id } = req.params;
+  const recipe = await getRecipeByIdService(parseInt(id as string));
 
-    if (!recipe) {
-      res.status(404).json({ error: 'Recipe not found' });
-      return;
-    }
-
-    res.json(recipe);
-  } catch (error) {
-    console.error('Error fetching recipe by id:', error);
-    res.status(500).json({ error: 'Internal server error' });
+  if (!recipe) {
+    res.status(404).json({ error: 'Recipe not found' });
+    return;
   }
+
+  res.json(recipe);
 };
 
 /**
@@ -61,42 +51,37 @@ export const getRecipeById = async (req: Request, res: Response): Promise<void> 
  * @param {Response} res - The Express response object.
  */
 export const createRecipe = async (req: Request, res: Response): Promise<void> => {
-  try {
-    // Process image if provided in multipart form data
-    let imageId = null;
-    if (req.file) {
-      const imageRecord = await processAndSaveImage(req.file, req);
-      imageId = imageRecord.id;
-    }
-
-    const { title, description, cuisineId } = req.body;
-    
-    // Arrays might come as JSON strings in formData
-    let ingredientsData: { ingredientId?: number, name?: string, quantity: string }[] = [];
-    let instructionsData: { stepNumber: number, description: string }[] = [];
-    
-    try {
-      if (req.body.ingredients) {
-        ingredientsData = typeof req.body.ingredients === 'string' ? JSON.parse(req.body.ingredients) : req.body.ingredients;
-      }
-      if (req.body.instructions) {
-        instructionsData = typeof req.body.instructions === 'string' ? JSON.parse(req.body.instructions) : req.body.instructions;
-      }
-    } catch (parseError) {
-      res.status(400).json({ error: 'Invalid JSON format for ingredients or instructions' });
-      return;
-    }
-
-    if (!title || !description || !cuisineId) {
-      res.status(400).json({ error: 'Title, description, and cuisineId are required' });
-      return;
-    }
-
-    const newRecipe = await createRecipeService(title, description, parseInt(cuisineId), imageId, ingredientsData, instructionsData);
-
-    res.status(201).json(newRecipe);
-  } catch (error) {
-    console.error('Error creating recipe:', error);
-    res.status(500).json({ error: 'Internal server error' });
+  // Process image if provided in multipart form data
+  let imageId = null;
+  if (req.file) {
+    const imageRecord = await processAndSaveImage(req.file, req);
+    imageId = imageRecord.id;
   }
+
+  const { title, description, cuisineId } = req.body;
+  
+  // Arrays might come as JSON strings in formData
+  let ingredientsData: { ingredientId?: number, name?: string, quantity: string }[] = [];
+  let instructionsData: { stepNumber: number, description: string }[] = [];
+  
+  try {
+    if (req.body.ingredients) {
+      ingredientsData = typeof req.body.ingredients === 'string' ? JSON.parse(req.body.ingredients) : req.body.ingredients;
+    }
+    if (req.body.instructions) {
+      instructionsData = typeof req.body.instructions === 'string' ? JSON.parse(req.body.instructions) : req.body.instructions;
+    }
+  } catch (parseError) {
+    res.status(400).json({ error: 'Invalid JSON format for ingredients or instructions' });
+    return;
+  }
+
+  if (!title || !description || !cuisineId) {
+    res.status(400).json({ error: 'Title, description, and cuisineId are required' });
+    return;
+  }
+
+  const newRecipe = await createRecipeService(title, description, parseInt(cuisineId), imageId, ingredientsData, instructionsData);
+
+  res.status(201).json(newRecipe);
 };

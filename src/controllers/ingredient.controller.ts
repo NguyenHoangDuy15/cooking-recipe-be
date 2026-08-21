@@ -9,14 +9,9 @@ import { getAllIngredientsService, getRecipesByIngredientsService, createIngredi
  * @param {Response} res - The Express response object.
  */
 export const getAllIngredients = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const searchName = req.query.name as string;
-    const ingredients = await getAllIngredientsService(searchName);
-    res.json(ingredients);
-  } catch (error) {
-    console.error('Error fetching ingredients:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
+  const searchName = req.query.name as string;
+  const ingredients = await getAllIngredientsService(searchName);
+  res.json(ingredients);
 };
 
 /**
@@ -28,24 +23,19 @@ export const getAllIngredients = async (req: Request, res: Response): Promise<vo
  * @param {Response} res - The Express response object.
  */
 export const getRecipesByIngredients = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const names = req.query.names as string;
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 10;
+  const names = req.query.names as string;
+  const page = parseInt(req.query.page as string) || 1;
+  const limit = parseInt(req.query.limit as string) || 10;
 
-    if (!names) {
-      res.status(400).json({ error: 'Please provide at least one ingredient name using the "names" query parameter' });
-      return;
-    }
-
-    const ingredientNamesArray = names.split(',').map(name => name.trim());
-    const result = await getRecipesByIngredientsService(ingredientNamesArray, page, limit);
-
-    res.json(result);
-  } catch (error) {
-    console.error('Error fetching recipes by ingredients:', error);
-    res.status(500).json({ error: 'Internal server error' });
+  if (!names) {
+    res.status(400).json({ error: 'Please provide at least one ingredient name using the "names" query parameter' });
+    return;
   }
+
+  const ingredientNamesArray = names.split(',').map(name => name.trim());
+  const result = await getRecipesByIngredientsService(ingredientNamesArray, page, limit);
+
+  res.json(result);
 };
 
 /**
@@ -55,18 +45,8 @@ export const getRecipesByIngredients = async (req: Request, res: Response): Prom
  * @param {Response} res - The Express response object.
  */
 export const createIngredient = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { name } = req.body;
-    
-    if (!name || typeof name !== 'string' || name.trim() === '') {
-      res.status(400).json({ error: 'Ingredient name is required and must be a valid string' });
-      return;
-    }
-
-    const newIngredient = await createIngredientService(name.trim());
-    res.status(201).json(newIngredient);
-  } catch (error) {
-    console.error('Error creating ingredient:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
+  const { name } = req.body;
+  
+  const newIngredient = await createIngredientService(name.trim());
+  res.status(201).json(newIngredient);
 };

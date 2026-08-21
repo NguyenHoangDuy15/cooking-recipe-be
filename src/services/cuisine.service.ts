@@ -9,16 +9,14 @@ import { removeAccents } from '../utils/string.util';
  * @returns {Promise<Array<Object>>} A list of all cuisines matching the search.
  */
 export const getAllCuisinesService = async (searchName?: string) => {
-  const allCuisines = await prisma.cuisine.findMany({
+  const whereClause = searchName ? { name: { contains: searchName } } : {};
+  
+  return await prisma.cuisine.findMany({
+    where: whereClause,
     include: {
-      image: true // Include associated image if any
+      image: true
     }
   });
-  
-  if (!searchName) return allCuisines;
-
-  const unaccentedSearch = removeAccents(searchName).toLowerCase();
-  return allCuisines.filter(c => removeAccents(c.name).toLowerCase().includes(unaccentedSearch));
 };
 
 /**

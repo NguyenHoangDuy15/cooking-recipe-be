@@ -13,7 +13,6 @@ import { removeAccents } from '../utils/string.util';
  * @returns {Promise<Object>} An object containing the paginated data array and pagination metadata.
  */
 export const getRecipesService = async (page: number, limit: number, search: string, cuisineId: number | undefined, ingredients: string | undefined) => {
-  // 1. Build Prisma where clause for strict filters (cuisine, exact ingredients)
   const whereClause: any = {};
 
   if (cuisineId) {
@@ -29,39 +28,35 @@ export const getRecipesService = async (page: number, limit: number, search: str
     };
   }
 
-  // Fetch all recipes matching the strict filters to do precise memory-filtering for search
-  // This avoids MySQL's accent-insensitive collation matching "gà" with "ga" (Jjigae) or "gậ" (ngậy)
-  const allRecipes = await prisma.recipe.findMany({
-    where: whereClause,
-    include: {
-      image: true,
-      cuisine: true,
-      ingredients: {
-        include: { ingredient: true }
-      }
-    },
-    orderBy: { createdAt: 'desc' }
-  });
-
-  // 2. JS Memory Filter for "search" keyword to ensure accurate substring matching
-  let filteredRecipes = allRecipes;
   if (search) {
-    const unaccentedSearch = removeAccents(search).toLowerCase();
-
-    filteredRecipes = allRecipes.filter(recipe => {
-      return removeAccents(recipe.title).toLowerCase().includes(unaccentedSearch) || 
-             removeAccents(recipe.description).toLowerCase().includes(unaccentedSearch) || 
-             recipe.ingredients.some(ri => removeAccents(ri.ingredient.name).toLowerCase().includes(unaccentedSearch));
-    });
+    whereClause.OR = [
+      { title: { contains: search } },
+      { description: { contains: search } },
+      { ingredients: { some: { ingredient: { name: { contains: search } } } } }
+    ];
   }
 
-  // 3. Paginate the filtered results
-  const total = filteredRecipes.length;
   const skip = (page - 1) * limit;
-  const paginatedRecipes = filteredRecipes.slice(skip, skip + limit);
+
+  const [recipes, total] = await Promise.all([
+    prisma.recipe.findMany({
+      where: whereClause,
+      include: {
+        image: true,
+        cuisine: true,
+        ingredients: {
+          include: { ingredient: true }
+        }
+      },
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take: limit,
+    }),
+    prisma.recipe.count({ where: whereClause })
+  ]);
 
   return {
-    data: paginatedRecipes,
+    data: recipes,
     meta: {
       total,
       page,

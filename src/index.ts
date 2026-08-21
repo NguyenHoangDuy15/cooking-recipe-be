@@ -8,6 +8,8 @@ import imageRoutes from './routes/image.routes';
 import recipeRoutes from './routes/recipe.routes';
 import cuisineRoutes from './routes/cuisine.routes';
 import ingredientRoutes from './routes/ingredient.routes';
+import authRoutes from './routes/auth.routes';
+import { errorHandler } from './middlewares/errorHandler';
 import swaggerUi from 'swagger-ui-express';
 import fs from 'fs';
 
@@ -30,6 +32,7 @@ if (config.storageMode === 'local') {
 }
 
 // Mount routes
+app.use('/api/auth', authRoutes);
 app.use('/api/images', imageRoutes);
 app.use('/api/recipes', recipeRoutes);
 app.use('/api/cuisines', cuisineRoutes);
@@ -54,6 +57,8 @@ app.get('/', (req, res) => {
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', storageMode: config.storageMode });
 });
+
+app.use(errorHandler);
 
 app.listen(config.port, () => {
   console.log(`Server is running on port ${config.port}`);
